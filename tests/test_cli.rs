@@ -47,7 +47,7 @@ fn assert_line_matches(lines: &Vec<String>, pat: &str, count: i32) {
 
     for line in lines {
         if re.is_match(line.trim()) {
-            match_count = match_count + 1;
+            match_count += 1;
         }
     }
 

@@ -36,18 +36,18 @@ impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.line {
             Err(err) => writeln!(f, "<{}> Error: {}", self.name, err),
-            Ok(line_reader::Line::PartialLine(s)) => {
+            Ok(line_reader::Line::Partial(s)) => {
                 writeln!(f, "[{}...] {}", self.name, s.trim_end())
             }
             Ok(line_reader::Line::EOF(s)) => {
                 let s = s.trim_end();
-                if s.len() > 0 {
+                if !s.is_empty() {
                     writeln!(f, "[{}<EOF>] {}", self.name, s)
                 } else {
                     write!(f, "")
                 }
             }
-            Ok(line_reader::Line::FullLine(s)) => writeln!(f, "[{}] {}", self.name, s.trim_end()),
+            Ok(line_reader::Line::Full(s)) => writeln!(f, "[{}] {}", self.name, s.trim_end()),
         }
     }
 }
@@ -56,10 +56,10 @@ fn read_env_as_number<N>(env: &str, default: N) -> N
 where
     N: std::str::FromStr + std::string::ToString,
 {
-    return env::var(env)
+    env::var(env)
         .unwrap_or(default.to_string())
         .parse::<N>()
-        .unwrap_or(default);
+        .unwrap_or(default)
 }
 
 enum Message {
@@ -94,7 +94,6 @@ impl MultipChild<'_> {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .ok()
             .expect("failed to spawn command");
 
         let stdout = cmd.stdout.take().expect("failed to take stdout");
@@ -137,10 +136,7 @@ impl MultipChild<'_> {
                 let name = name.to_string();
                 let line = reader.read_line();
 
-                let exit = match line {
-                    Ok(line_reader::Line::EOF(_)) => true,
-                    _ => false,
-                };
+                let exit = matches!(line, Ok(line_reader::Line::EOF(_)));
 
                 tx.send(Message::Line(Line { name, line })).unwrap();
 
@@ -201,7 +197,7 @@ impl MultipChild<'_> {
             return true;
         }
 
-        return false;
+        false
     }
 }
 
@@ -210,7 +206,7 @@ fn command_with_name(s: &String) -> (&str, &str) {
 
     for (i, &item) in bytes.iter().enumerate() {
         if item == b':' {
-            return (&s[0..i], (&s[i + 1..]).trim());
+            return (&s[0..i], (s[i + 1..]).trim());
         }
     }
 
@@ -327,12 +323,16 @@ fn main() {
                 forward = Some(Signal::SIGINT);
                 sigint_count += 1;
 
-                if sigint_count == 2 {
-                    log!("Got second SIGINT, converting it to SIGKILL");
-                    forward = Some(Signal::SIGTERM);
-                } else if sigint_count > 2 {
-                    log!("Got third SIGINT, converting it to SIGKILL");
-                    forward = Some(Signal::SIGKILL);
+                match sigint_count {
+                    2 => {
+                        log!("Got second SIGINT, converting it to SIGKILL");
+                        forward = Some(Signal::SIGTERM);
+                    }
+                    _ if sigint_count > 2 => {
+                        log!("Got third SIGINT, converting it to SIGKILL");
+                        forward = Some(Signal::SIGKILL);
+                    }
+                    _ => {}
                 }
             }
 

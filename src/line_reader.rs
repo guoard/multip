@@ -26,20 +26,6 @@ fn to_isize(i: usize) -> isize {
     isize::try_from(i).unwrap_or(0)
 }
 
-impl Line {
-    pub fn as_line<'a>(&'a self) -> &'a str {
-        match self {
-            Line::PartialLine(s) => &s,
-            Line::FullLine(s) => &s,
-            Line::EOF(s) => &s,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.as_line().trim_end().len()
-    }
-}
-
 // https://github.com/rust-lang/rust/blob/b69f6e65c081f9a628ef5db83ba77e3861e60e60/src/libstd/io/mod.rs#L333-L349
 fn append_to_string<F>(buf: &mut String, f: F) -> Result<usize, Error>
 where
@@ -65,17 +51,18 @@ where
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 pub enum Line {
-    FullLine(String),
-    PartialLine(String),
+    Full(String),
+    Partial(String),
     EOF(String),
 }
 
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Line::PartialLine(s) => write!(f, "PartialLine({})", s),
-            Line::FullLine(s) => write!(f, "FullLine({})", s),
+            Line::Partial(s) => write!(f, "PartialLine({})", s),
+            Line::Full(s) => write!(f, "FullLine({})", s),
             Line::EOF(s) => write!(f, "EOF({})", s),
         }
     }
@@ -185,11 +172,11 @@ impl<R: Read> SafeLineReader<R> {
             match status {
                 Status::Full(used) => {
                     self.inner.consume(used);
-                    return Ok(Line::FullLine(buf));
+                    return Ok(Line::Full(buf));
                 }
                 Status::Partial(used) => {
                     self.inner.consume(used);
-                    return Ok(Line::PartialLine(buf));
+                    return Ok(Line::Partial(buf));
                 }
                 Status::Missing(used) => {
                     if used == 0 {
@@ -209,8 +196,8 @@ impl<R: Read> SafeLineReader<R> {
 #[cfg(test)]
 fn get_full_line(s: Line) -> String {
     match s {
-        Line::FullLine(s) => s,
-        Line::PartialLine(s) => panic!("Expected full line but got partial with: `{}`", s),
+        Line::Full(s) => s,
+        Line::Partial(s) => panic!("Expected full line but got partial with: `{}`", s),
         Line::EOF(s) => panic!("Expected full line but got EOF with: `{}`", s),
     }
 }
@@ -218,8 +205,8 @@ fn get_full_line(s: Line) -> String {
 #[cfg(test)]
 fn get_partial_line(s: Line) -> String {
     match s {
-        Line::PartialLine(s) => s,
-        Line::FullLine(s) => panic!("Expected partial line but got full with: `{}`", s),
+        Line::Partial(s) => s,
+        Line::Full(s) => panic!("Expected partial line but got full with: `{}`", s),
         Line::EOF(s) => panic!("Expected partial line but got EOF with: `{}`", s),
     }
 }

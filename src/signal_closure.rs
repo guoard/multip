@@ -37,7 +37,7 @@ pub fn trap_signal(s: Signal) {
 // Poll for the sotred signal and send it back via the channel
 pub fn poll_signals<F>(cb: F)
 where
-    F: 'static + Send + Fn(Signal) -> (),
+    F: 'static + Send + Fn(Signal),
 {
     thread::spawn(move || loop {
         let current_signal = SIGNAL.lock().expect("signal fail");
