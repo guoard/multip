@@ -2,7 +2,7 @@
 name = "multip"
 version = "0.0.0"
 authors = ["Esa-Matti Suuronen <esa-matti@suuronen.org>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 nix = "0.16.0"
