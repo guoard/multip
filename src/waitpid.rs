@@ -2,7 +2,6 @@ use nix::errno::Errno;
 use nix::sys::wait::WaitStatus::{Exited, Signaled, StillAlive};
 use nix::sys::wait::{waitpid, WaitPidFlag};
 use nix::unistd::Pid;
-use nix::Error::Sys;
 
 use crate::*;
 
@@ -31,15 +30,16 @@ impl Iterator for ProcessWaiter {
                 None
             }
 
-            Err(Sys(Errno::ECHILD)) => {
-                // log!("No child processess");
-                None
-            }
-
-            Err(err) => {
-                log!("Failed to waitpid() {}", err);
-                None
-            }
+            Err(err) => match err {
+                Errno::ECHILD => {
+                    // log!("No child processes");
+                    None
+                }
+                _ => {
+                    log!("Failed to waitpid() {}", err);
+                    None
+                }
+            },
         }
     }
 }

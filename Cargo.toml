@@ -5,7 +5,7 @@ authors = ["Esa-Matti Suuronen <esa-matti@suuronen.org>"]
 edition = "2021"
 
 [dependencies]
-nix = "0.16.0"
+nix = { version = "0.28.0", features = ["signal"] }
 libc = "0.2"
 memchr = "2.2.1"
 lazy_static = "1.4.0"
